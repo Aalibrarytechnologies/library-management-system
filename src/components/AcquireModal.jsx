@@ -1,21 +1,48 @@
-// components/books/modals/AcquireModal.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useUserContext } from "../context/UserContext";
 import { X, BookOpen, Trash2 } from "lucide-react";
+import { retryFetch } from "../utils/retryFetch";
+import DatePicker from "react-datepicker";
 
 export default function AcquireModal({
-  selectedBooks = [],
+  selectedBookIds = [],
   onClose,
   onBorrowSuccess,
+  setSelectedBooks,
 }) {
   const { token, user } = useUserContext();
-  const [books, setBooks] = useState(selectedBooks);
+  const [books, setBooks] = useState([]);
   const [dueDate, setDueDate] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Fetch full book details
+  useEffect(() => {
+    const fetchBookDetails = async () => {
+      try {
+        const promises = selectedBookIds.map((id) =>
+          retryFetch(`https://libarybackend.vercel.app/books/${id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          })
+        );
+        const responses = await Promise.all(promises);
+        const bookData = await Promise.all(responses.map((res) => res.json()));
+        setBooks(bookData);
+      } catch (err) {
+        console.error("Error fetching book details:", err);
+        toast.error("Failed to load selected books.");
+      }
+    };
+
+    if (selectedBookIds.length > 0) fetchBookDetails();
+  }, [selectedBookIds, token]);
+
   const handleRemove = (id) => {
-    setBooks((prev) => prev.filter((b) => b.id !== id));
+    setSelectedBooks((prev) => prev.filter((bookId) => bookId !== id));
+    setBooks((prev) => prev.filter((book) => book.id !== id));
   };
 
   const handleBorrow = async () => {
@@ -45,13 +72,32 @@ export default function AcquireModal({
 
       const results = await Promise.all(borrowPromises);
 
-      const allSuccessful = results.every((res) => res.ok);
-      if (allSuccessful) {
-        toast.success("Books borrowed successfully!");
+      const errors = [];
+      for (let i = 0; i < results.length; i++) {
+        const res = results[i];
+        if (!res.ok) {
+          const errorText = await res.text(); // try to get raw error for debugging
+          console.error(`Failed to borrow "${books[i].title}":`, errorText);
+          errors.push(books[i].title);
+        }
+      }
+
+      const successful = results.length - errors.length;
+      const failed = errors.length;
+
+      if (successful > 0 && failed === 0) {
+        toast.success("All books borrowed successfully!");
+        setSelectedBooks([]);
+        onBorrowSuccess?.();
+        onClose();
+      } else if (successful > 0 && failed > 0) {
+        toast.success(`${successful} book(s) borrowed, ${failed} failed.`);
+        toast.error(`Failed: ${errors.join(", ")}`);
+        setSelectedBooks([]);
         onBorrowSuccess?.();
         onClose();
       } else {
-        toast.error("Some books could not be borrowed.");
+        toast.error("Failed to borrow any books.");
       }
     } catch (err) {
       console.error(err);
@@ -62,7 +108,7 @@ export default function AcquireModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
       <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-lg">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-black dark:text-white">
@@ -77,11 +123,28 @@ export default function AcquireModal({
           <label className="text-sm text-gray-700 dark:text-gray-300">
             Due Date:
           </label>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
+          <DatePicker
+            selected={dueDate ? new Date(dueDate) : null}
+            onChange={(date) => setDueDate(date.toISOString().split("T")[0])}
+            minDate={new Date()}
+            maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
             className="w-full mt-1 px-3 py-2 border rounded-lg dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
+            dayClassName={(date) => {
+              const now = new Date();
+              const max = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+              const isOutsideRange = date < now || date > max;
+              return isOutsideRange ? "tooltip-day" : "";
+            }}
+            onCalendarOpen={() => {
+              setTimeout(() => {
+                document.querySelectorAll(".tooltip-day").forEach((el) => {
+                  el.setAttribute(
+                    "title",
+                    "Date must be within 30 days from today"
+                  );
+                });
+              }, 0);
+            }}
           />
         </div>
 

@@ -226,7 +226,7 @@ export default function Catalog() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black dark:bg-zinc-900 dark:border-zinc-600 dark:text-white"
           />
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
         </div>
       </div>
 
@@ -339,21 +339,31 @@ export default function Catalog() {
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 Select a new due date (within 30 days)
               </p>
+
               <DatePicker
-                selected={renewDate}
-                onChange={(date) => setRenewDate(date)}
-                minDate={new Date()}
-                maxDate={
-                  renewDueLimit
-                    ? new Date(
-                        Math.min(
-                          new Date().getTime() + 30 * 24 * 60 * 60 * 1000,
-                          new Date(renewDueLimit).getTime()
-                        )
-                      )
-                    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                selected={renewDate ? new Date(renewDate) : null}
+                onChange={(date) =>
+                  setRenewDate(date.toISOString().split("T")[0])
                 }
-                className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-black dark:text-white"
+                minDate={new Date()}
+                maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
+                className="w-full mt-1 px-3 py-2 border rounded-lg dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
+                dayClassName={(date) => {
+                  const now = new Date();
+                  const max = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                  const isOutsideRange = date < now || date > max;
+                  return isOutsideRange ? "tooltip-day" : "";
+                }}
+                onCalendarOpen={() => {
+                  setTimeout(() => {
+                    document.querySelectorAll(".tooltip-day").forEach((el) => {
+                      el.setAttribute(
+                        "title",
+                        "Date must be within 30 days from today"
+                      );
+                    });
+                  }, 0);
+                }}
               />
             </div>
           )}

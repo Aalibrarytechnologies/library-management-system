@@ -51,7 +51,7 @@ export default function UpdateBookModal({ book, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-lg">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-black dark:text-white">

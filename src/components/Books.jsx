@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { Plus, ShoppingCart, Pencil, Trash, Filter } from "lucide-react";
+import {
+  Plus,
+  ShoppingCart,
+  Pencil,
+  Trash,
+  Filter,
+  Search,
+} from "lucide-react";
 import { useUserContext } from "../context/UserContext";
 import { retryFetch } from "../utils/retryFetch";
 import toast from "react-hot-toast";
@@ -7,6 +14,7 @@ import AddBookModal from "../components/AddBookModal";
 import UpdateBookModal from "../components/UpdateBookModal";
 import AcquireModal from "../components/AcquireModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { useBooksContext } from "../context/BooksContext";
 
 export default function Books() {
   const { user, token } = useUserContext();
@@ -15,7 +23,7 @@ export default function Books() {
   const [books, setBooks] = useState([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedBooks, setSelectedBooks] = useState([]);
+  const { selectedBooks, setSelectedBooks } = useBooksContext();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -24,6 +32,7 @@ export default function Books() {
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(10);
   const [totalBooks, setTotalBooks] = useState(0);
+  const [activeTab, setActiveTab] = useState("manage");
 
   const totalPages = Math.ceil(totalBooks / limit);
   const currentPage = Math.floor(skip / limit) + 1;
@@ -34,34 +43,32 @@ export default function Books() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const fetchBooks = async () => {
+    try {
+      const pageRes = await retryFetch(
+        `https://libarybackend.vercel.app/books/?skip=${skip}&limit=${limit}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const pageData = await pageRes.json();
+      setBooks(pageData);
+
+      const countRes = await retryFetch(
+        `https://libarybackend.vercel.app/books/?skip=0&limit=10000`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const allBooks = await countRes.json();
+      setTotalBooks(allBooks.length);
+    } catch (err) {
+      toast.error("Failed to fetch books.");
+    }
+  };
+
   // Fetch books
   useEffect(() => {
-    const fetchBooks = async () => {
-      try {
-        // Fetch current page
-        const pageRes = await retryFetch(
-          `https://libarybackend.vercel.app/books/?skip=${skip}&limit=${limit}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        const pageData = await pageRes.json();
-        setBooks(pageData);
-
-        // Fetch full count
-        const countRes = await retryFetch(
-          `https://libarybackend.vercel.app/books/?skip=0&limit=10000`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        const allBooks = await countRes.json();
-        setTotalBooks(allBooks.length);
-      } catch (err) {
-        toast.error("Failed to fetch books.");
-      }
-    };
-
     if (token) fetchBooks();
   }, [token, skip, limit]);
 
@@ -82,27 +89,76 @@ export default function Books() {
       {/* Top bar */}
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
         <h2 className="text-xl font-semibold text-black dark:text-white">
-          Book Management
+          {!isStaff ? "Available Books" : "Book Management"}
         </h2>
+
+        {isStaff && (
+          <div className="flex gap-4">
+            <button
+              className={`px-3 py-1 rounded-lg ${
+                activeTab === "manage"
+                  ? "bg-black text-white dark:bg-white dark:text-black"
+                  : "bg-gray-200 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
+              }`}
+              onClick={() => setActiveTab("manage")}
+            >
+              Manage Books
+            </button>
+            <button
+              className={`px-3 py-1 rounded-lg ${
+                activeTab === "borrow"
+                  ? "bg-black text-white dark:bg-white dark:text-black"
+                  : "bg-gray-200 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
+              }`}
+              onClick={() => setActiveTab("borrow")}
+            >
+              Borrow Books
+            </button>
+          </div>
+        )}
 
         <div className="flex gap-4 items-center">
           <div className="flex gap-2">
-            <button
-              onClick={() =>
-                isStaff ? setShowAddModal(true) : setShowAcquireModal(true)
-              }
-              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
-            >
-              {isStaff ? (
-                <Plus className="w-4 h-4" />
-              ) : (
-                <ShoppingCart className="w-4 h-4" />
-              )}
-              {isStaff ? "Add Book" : "Acquire"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (isStaff) {
+                    if (activeTab === "manage") {
+                      setShowAddModal(true);
+                    } else {
+                      setShowAcquireModal(true);
+                    }
+                  } else {
+                    setShowAcquireModal(true);
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
+              >
+                {isStaff ? (
+                  <Plus className="w-4 h-4" />
+                ) : (
+                  <ShoppingCart className="w-4 h-4" />
+                )}
+                {isStaff
+                  ? activeTab === "manage"
+                    ? "Add Book"
+                    : "Acquire"
+                  : "Acquire"}
+              </button>
+
+              {(!isStaff || activeTab === "borrow") &&
+                selectedBooks.length > 0 && (
+                  <button
+                    onClick={() => setSelectedBooks([])}
+                    className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:underline"
+                  >
+                    Clear All
+                  </button>
+                )}
+            </div>
 
             <button
-              className="flex items-center gap-1 px-3 py-2 border rounded bg-gray-50 dark:bg-zinc-800"
+              className="flex items-center gap-1 px-3 py-2 border rounded-lg bg-gray-50 dark:bg-zinc-800"
               onClick={() => {
                 const next = [5, 10, 20].find((n) => n > limit) || 5;
                 setLimit(next);
@@ -114,13 +170,16 @@ export default function Books() {
             </button>
           </div>
 
-          <input
-            type="text"
-            placeholder="Search books..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white w-full sm:w-64"
-          />
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search books..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black dark:bg-zinc-900 dark:border-zinc-600 dark:text-white"
+            />
+            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
+          </div>
         </div>
       </div>
 
@@ -134,59 +193,92 @@ export default function Books() {
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm text-left border dark:border-zinc-700">
-          <thead className="bg-gray-100 dark:bg-zinc-800 text-black dark:text-white">
-            <tr>
-              <th className="px-4 py-2">Book ID</th>
-              <th className="px-4 py-2">Title</th>
-              <th className="px-4 py-2">Author</th>
-              <th className="px-4 py-2">Genre</th>
-              <th className="px-4 py-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredBooks.map((book) => (
-              <tr key={book.id} className="border-t dark:border-zinc-700">
-                <td className="px-4 py-2">{book.id}</td>
-                <td className="px-4 py-2">{book.title}</td>
-                <td className="px-4 py-2">{book.author}</td>
-                <td className="px-4 py-2">{book.genre}</td>
-                <td className="px-4 py-2">
-                  {isStaff ? (
-                    <div className="flex gap-3">
-                      <Pencil
-                        className="w-4 h-4 text-blue-600 cursor-pointer"
-                        onClick={() => {
-                          setEditingBook(book);
-                          setShowUpdateModal(true);
-                        }}
+        {activeTab === "manage" && (
+          <table className="min-w-full text-sm text-left border dark:border-zinc-700">
+            <thead className="bg-gray-100 dark:bg-zinc-800 text-black dark:text-white">
+              <tr>
+                <th className="px-4 py-2">Book ID</th>
+                <th className="px-4 py-2">Title</th>
+                <th className="px-4 py-2">Author</th>
+                <th className="px-4 py-2">Genre</th>
+                <th className="px-4 py-2">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredBooks.map((book) => (
+                <tr key={book.id} className="border-t dark:border-zinc-700">
+                  <td className="px-4 py-2">{book.id}</td>
+                  <td className="px-4 py-2">{book.title}</td>
+                  <td className="px-4 py-2">{book.author}</td>
+                  <td className="px-4 py-2">{book.genre}</td>
+                  <td className="px-4 py-2">
+                    {isStaff ? (
+                      <div className="flex gap-3">
+                        <Pencil
+                          className="w-4 h-4 text-blue-600 cursor-pointer"
+                          onClick={() => {
+                            setEditingBook(book);
+                            setShowUpdateModal(true);
+                          }}
+                        />
+                        <Trash
+                          className="w-4 h-4 text-red-600 cursor-pointer"
+                          onClick={() => {
+                            setEditingBook(book);
+                            setShowDeleteModal(true);
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <input
+                        type="checkbox"
+                        checked={selectedBooks.includes(book.id)}
+                        onChange={() => handleSelect(book.id)}
                       />
-                      <Trash
-                        className="w-4 h-4 text-red-600 cursor-pointer"
-                        onClick={() => {
-                          setEditingBook(book);
-                          setShowDeleteModal(true);
-                        }}
-                      />
-                    </div>
-                  ) : (
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {activeTab === "borrow" && (
+          <table className="min-w-full text-sm text-left border dark:border-zinc-700">
+            <thead className="bg-gray-100 dark:bg-zinc-800 text-black dark:text-white">
+              <tr>
+                <th className="px-4 py-2">Book ID</th>
+                <th className="px-4 py-2">Title</th>
+                <th className="px-4 py-2">Author</th>
+                <th className="px-4 py-2">Genre</th>
+                <th className="px-4 py-2">Select</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredBooks.map((book) => (
+                <tr key={book.id} className="border-t dark:border-zinc-700">
+                  <td className="px-4 py-2">{book.id}</td>
+                  <td className="px-4 py-2">{book.title}</td>
+                  <td className="px-4 py-2">{book.author}</td>
+                  <td className="px-4 py-2">{book.genre}</td>
+                  <td className="px-4 py-2">
                     <input
                       type="checkbox"
                       checked={selectedBooks.includes(book.id)}
                       onChange={() => handleSelect(book.id)}
                     />
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Pagination */}
       <div className="flex justify-between mt-4">
         <button
-          className="px-3 py-1 border rounded disabled:opacity-50"
+          className="px-3 py-1 border rounded-lg disabled:opacity-50"
           disabled={skip === 0}
           onClick={() => setSkip(skip - limit)}
         >
@@ -196,7 +288,7 @@ export default function Books() {
           Page {currentPage} of {totalPages}
         </span>
         <button
-          className="px-3 py-1 border rounded disabled:opacity-50"
+          className="px-3 py-1 border rounded-lg disabled:opacity-50"
           disabled={skip + limit >= totalBooks}
           onClick={() => setSkip(skip + limit)}
         >
@@ -221,9 +313,12 @@ export default function Books() {
       {showAcquireModal && (
         <AcquireModal
           selectedBookIds={selectedBooks}
-          allBooks={books}
           onClose={() => setShowAcquireModal(false)}
-          setSelectedBooks={setSelectedBooks}
+          setSelectedBooks={setSelectedBooks} // ✅ Pass this
+          onBorrowSuccess={() => {
+            setSelectedBooks([]); // Optional
+            fetchBooks(); // Optional: Refresh list
+          }}
         />
       )}
     </div>

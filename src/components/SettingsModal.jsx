@@ -50,7 +50,7 @@ export default function SettingsModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
       <div
         ref={modalRef}
         className="bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow-lg w-[90%] max-w-md p-6 space-y-6"
