@@ -23,6 +23,7 @@ export default function Login() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(""); // 👈 Inline error state
 
   useEffect(() => {
     gsap.fromTo(
@@ -34,11 +35,13 @@ export default function Login() {
 
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
+    setErrorMsg(""); // Clear inline error when typing
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(""); // Reset error before submission
 
     const formBody = new URLSearchParams({
       username: credentials.username,
@@ -62,7 +65,6 @@ export default function Login() {
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("role", role);
 
-      // 🔁 Fetch user with token
       const userRes = await retryFetch(
         "https://libarybackend.vercel.app/users/me/",
         {
@@ -80,15 +82,18 @@ export default function Login() {
       const userData = await userRes.json();
 
       login(userData, data.access_token);
-
       toast.success("Login successful!");
       navigate(`/${role}/dashboard`);
     } catch (err) {
-      if (err.json) {
-        const errorData = await err.json();
-        toast.error(errorData.detail || "Invalid username or password.");
-      } else {
-        toast.error(err.message || "Network error. Please try again.");
+      const fallback = "Invalid username or password.";
+      try {
+        const errorData = await err?.json?.();
+        const message = errorData?.detail || fallback;
+        toast.error(message);
+        setErrorMsg(message);
+      } catch {
+        toast.error(err.message || fallback);
+        setErrorMsg(err.message || fallback);
       }
     } finally {
       setLoading(false);
@@ -128,6 +133,10 @@ export default function Login() {
               onChange={handleChange}
               required
             />
+
+            {errorMsg && (
+              <p className="text-red-600 text-sm my-4">{errorMsg}</p>
+            )}
 
             <AuthButton
               label={loading ? "Signing in..." : "Sign In"}

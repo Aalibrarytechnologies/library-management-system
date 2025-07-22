@@ -17,13 +17,9 @@ export default function Signup() {
 
   const role = location.pathname.includes("staff") ? "staff" : "student";
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     gsap.fromTo(
@@ -35,18 +31,19 @@ export default function Signup() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Manual field validation
     if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-      toast.error("All fields are required.");
+      setError("All fields are required.");
       return;
     }
 
     setLoading(true);
+    setError("");
 
     const payload = {
       full_name: form.name.trim(),
@@ -65,15 +62,62 @@ export default function Signup() {
         body: JSON.stringify(payload),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData?.detail || "Signup failed");
+        // 🔎 Flexible error parsing
+        let message = "Signup failed";
+        if (typeof data.detail === "string") {
+          message = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          message = data.detail.map((d) => d.msg).join(", ");
+        } else if (data.message) {
+          message = data.message;
+        }
+        throw new Error(message);
       }
 
+      // ✅ Auto-login after signup
+      const loginRes = await retryFetch(
+        "https://libarybackend.vercel.app/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+          body: new URLSearchParams({
+            username: form.email,
+            password: form.password,
+          }).toString(),
+        }
+      );
+
+      const loginData = await loginRes.json();
+
+      if (!loginData.access_token) throw new Error("Login failed after signup");
+
+      const userRes = await retryFetch(
+        "https://libarybackend.vercel.app/users/me/",
+        {
+          headers: {
+            Authorization: `Bearer ${loginData.access_token}`,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const userData = await userRes.json();
+      login(userData, loginData.access_token);
+
       toast.success("Signup successful!");
-      navigate(`/${role}/login`);
+      navigate(`/${role}/dashboard`);
     } catch (err) {
-      toast.error(err.message || "Something went wrong.");
+      const errorData =
+        err instanceof Response ? await err.json().catch(() => null) : null;
+      const message = errorData?.detail || err.message || "Signup failed";
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -82,7 +126,7 @@ export default function Signup() {
   return (
     <div ref={containerRef}>
       <AuthLayout type="signup">
-        <div className="w-full max-w-md">
+        <div>
           <img
             src={black_logo}
             alt="BookWorm Logo"
@@ -118,6 +162,8 @@ export default function Signup() {
               onChange={handleChange}
               required
             />
+
+            {error && <p className="text-sm text-red-600 my-4 ">{error}</p>}
 
             <AuthButton
               label={loading ? "Creating account..." : "Sign Up"}

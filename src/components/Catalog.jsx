@@ -192,7 +192,7 @@ export default function Catalog() {
   };
 
   return (
-    <div className="px-4 py-6 sm:px-8 font-montserrat">
+    <div className="px-4 py-6 sm:px-8">
       {/* Tabs + Search */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="flex gap-2">
