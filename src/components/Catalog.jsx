@@ -27,7 +27,7 @@ export default function Catalog() {
   const [confirmMessage, setConfirmMessage] = useState("");
   const [confirmTitle, setConfirmTitle] = useState("");
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [renewDate, setRenewDate] = useState(new Date());
+  const [renewDate, setRenewDate] = useState(null);
   const [renewingBookId, setRenewingBookId] = useState(null);
   const [renewDueLimit, setRenewDueLimit] = useState(null);
 
@@ -164,10 +164,7 @@ export default function Catalog() {
       return;
     }
 
-    const formattedDate = renewDate
-      .toLocaleDateString("en-GB")
-      .split("/")
-      .join("%2F");
+    const formattedDate = renewDate.toISOString().split("T")[0];
 
     try {
       await retryFetch(
@@ -341,10 +338,8 @@ export default function Catalog() {
               </p>
 
               <DatePicker
-                selected={renewDate ? new Date(renewDate) : null}
-                onChange={(date) =>
-                  setRenewDate(date.toISOString().split("T")[0])
-                }
+                selected={renewDate}
+                onChange={(date) => setRenewDate(date)}
                 minDate={new Date()}
                 maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
                 className="w-full mt-1 px-3 py-2 border rounded-lg dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"

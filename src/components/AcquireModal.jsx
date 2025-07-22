@@ -13,7 +13,7 @@ export default function AcquireModal({
 }) {
   const { token, user } = useUserContext();
   const [books, setBooks] = useState([]);
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // Fetch full book details
@@ -64,7 +64,7 @@ export default function AcquireModal({
           body: JSON.stringify({
             book_id: book.id,
             user_id: user.id,
-            due_date: dueDate,
+            due_date: dueDate?.toISOString().split("T")[0],
             returned_date: null,
           }),
         })
@@ -124,8 +124,8 @@ export default function AcquireModal({
             Due Date:
           </label>
           <DatePicker
-            selected={dueDate ? new Date(dueDate) : null}
-            onChange={(date) => setDueDate(date.toISOString().split("T")[0])}
+            selected={dueDate}
+            onChange={(date) => setDueDate(date)}
             minDate={new Date()}
             maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
             className="w-full mt-1 px-3 py-2 border rounded-lg dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
