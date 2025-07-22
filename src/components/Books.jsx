@@ -10,10 +10,14 @@ import {
 import { useUserContext } from "../context/UserContext";
 import { retryFetch } from "../utils/retryFetch";
 import toast from "react-hot-toast";
-import AddBookModal from "../components/AddBookModal";
-import UpdateBookModal from "../components/UpdateBookModal";
-import AcquireModal from "../components/AcquireModal";
-import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { lazy, Suspense } from "react";
+
+const AddBookModal = lazy(() => import("../components/AddBookModal"));
+const UpdateBookModal = lazy(() => import("../components/UpdateBookModal"));
+const AcquireModal = lazy(() => import("../components/AcquireModal"));
+const DeleteConfirmModal = lazy(() =>
+  import("../components/DeleteConfirmModal")
+);
 import { useBooksContext } from "../context/BooksContext";
 
 export default function Books() {
@@ -71,6 +75,13 @@ export default function Books() {
   useEffect(() => {
     if (token) fetchBooks();
   }, [token, skip, limit]);
+
+  useEffect(() => {
+    if (!isStaff || activeTab === "borrow") {
+      import("../components/AcquireModal");
+    }
+  }, [isStaff, activeTab]);
+
 
   const handleSelect = (id) =>
     setSelectedBooks((prev) =>
@@ -297,30 +308,36 @@ export default function Books() {
       </div>
 
       {/* Modals */}
-      {showAddModal && <AddBookModal onClose={() => setShowAddModal(false)} />}
-      {showUpdateModal && editingBook && (
-        <UpdateBookModal
-          book={editingBook}
-          onClose={() => setShowUpdateModal(false)}
-        />
-      )}
-      {showDeleteModal && editingBook && (
-        <DeleteConfirmModal
-          book={editingBook}
-          onClose={() => setShowDeleteModal(false)}
-        />
-      )}
-      {showAcquireModal && (
-        <AcquireModal
-          selectedBookIds={selectedBooks}
-          onClose={() => setShowAcquireModal(false)}
-          setSelectedBooks={setSelectedBooks} // ✅ Pass this
-          onBorrowSuccess={() => {
-            setSelectedBooks([]); // Optional
-            fetchBooks(); // Optional: Refresh list
-          }}
-        />
-      )}
+      <Suspense
+        fallback={<div className="text-center text-sm py-4">Loading...</div>}
+      >
+        {showAddModal && (
+          <AddBookModal onClose={() => setShowAddModal(false)} />
+        )}
+        {showUpdateModal && editingBook && (
+          <UpdateBookModal
+            book={editingBook}
+            onClose={() => setShowUpdateModal(false)}
+          />
+        )}
+        {showDeleteModal && editingBook && (
+          <DeleteConfirmModal
+            book={editingBook}
+            onClose={() => setShowDeleteModal(false)}
+          />
+        )}
+        {showAcquireModal && (
+          <AcquireModal
+            selectedBookIds={selectedBooks}
+            onClose={() => setShowAcquireModal(false)}
+            setSelectedBooks={setSelectedBooks}
+            onBorrowSuccess={() => {
+              setSelectedBooks([]);
+              fetchBooks();
+            }}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

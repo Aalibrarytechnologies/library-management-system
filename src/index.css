@@ -3,5 +3,5 @@
 @import "react-datepicker/dist/react-datepicker.css";
 
 body {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Montserrat", system-ui, sans-serif;
 }

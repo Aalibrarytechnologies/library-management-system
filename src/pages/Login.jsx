@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { gsap } from "gsap";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import AuthLayout from "../components/AuthLayout";
+import AuthLayout from "../layouts/AuthLayout";
 import FormInput from "../components/FormInput";
 import AuthButton from "../components/AuthButton";
 import black_logo from "../assets/black_logo.png";

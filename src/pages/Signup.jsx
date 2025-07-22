@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { gsap } from "gsap";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import AuthLayout from "../components/AuthLayout";
+import AuthLayout from "../layouts/AuthLayout";
 import FormInput from "../components/FormInput";
 import AuthButton from "../components/AuthButton";
 import black_logo from "../assets/black_logo.png";
@@ -34,85 +34,85 @@ export default function Signup() {
     setError("");
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-    setError("All fields are required.");
-    return;
-  }
-
-  setLoading(true);
-  setError("");
-
-  const payload = {
-    full_name: form.name.trim(),
-    email: form.email.trim(),
-    role, // role from URL
-    password: form.password,
-  };
-
-  try {
-    const res = await retryFetch("https://libarybackend.vercel.app/users/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData?.detail || "Signup failed");
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+      setError("All fields are required.");
+      return;
     }
 
-    const data = await res.json();
+    setLoading(true);
+    setError("");
 
-    // Auto-login after signup
-    const loginRes = await retryFetch(
-      "https://libarybackend.vercel.app/login",
-      {
+    const payload = {
+      full_name: form.name.trim(),
+      email: form.email.trim(),
+      role, // role from URL
+      password: form.password,
+    };
+
+    try {
+      const res = await retryFetch("https://libarybackend.vercel.app/users/", {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: new URLSearchParams({
-          username: form.email,
-          password: form.password,
-        }),
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData?.detail || "Signup failed");
       }
-    );
 
-    const loginData = await loginRes.json();
-    if (!loginData.access_token) throw new Error("Auto-login failed");
+      const data = await res.json();
 
-    // Fetch user
-    const userRes = await retryFetch(
-      "https://libarybackend.vercel.app/users/me/",
-      {
-        headers: {
-          Authorization: `Bearer ${loginData.access_token}`,
-          Accept: "application/json",
-        },
-      }
-    );
+      // Auto-login after signup
+      const loginRes = await retryFetch(
+        "https://libarybackend.vercel.app/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+          body: new URLSearchParams({
+            username: form.email,
+            password: form.password,
+          }),
+        }
+      );
 
-    const userData = await userRes.json();
+      const loginData = await loginRes.json();
+      if (!loginData.access_token) throw new Error("Auto-login failed");
 
-    await login(userData, loginData.access_token);
+      // Fetch user
+      const userRes = await retryFetch(
+        "https://libarybackend.vercel.app/users/me/",
+        {
+          headers: {
+            Authorization: `Bearer ${loginData.access_token}`,
+            Accept: "application/json",
+          },
+        }
+      );
 
-    // Redirect to correct dashboard (in case role in backend differs from URL)
-    const actualRole = userData.role;
-    navigate(`/${actualRole}/dashboard`);
-    toast.success("Signup successful!");
-  } catch (err) {
-    setError(err.message || "Something went wrong.");
-  } finally {
-    setLoading(false);
-  }
-};
+      const userData = await userRes.json();
+
+      await login(userData, loginData.access_token);
+
+      // Redirect to correct dashboard (in case role in backend differs from URL)
+      const actualRole = userData.role;
+      navigate(`/${actualRole}/dashboard`);
+      toast.success("Signup successful!");
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div ref={containerRef}>
