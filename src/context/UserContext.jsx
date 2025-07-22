@@ -42,11 +42,15 @@ export const UserProvider = ({ children }) => {
   };
 
   const login = (userData, authToken) => {
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem("user", JSON.stringify(userData));
-    localStorage.setItem("access_token", authToken);
+    return new Promise((resolve) => {
+      setUser(userData);
+      setToken(authToken);
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("access_token", authToken);
+      resolve();
+    });
   };
+
 
   const logout = () => {
     setUser(null);

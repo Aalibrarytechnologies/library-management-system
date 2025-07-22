@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Book, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, BookOpen, Book, LogOut } from "lucide-react";
 import { useUserContext } from "../context/UserContext";
 import { useThemeContext } from "../context/ThemeContext";
 import black_logo from "../assets/black_logo.png";

@@ -38,67 +38,70 @@ export default function Login() {
     setErrorMsg(""); // Clear inline error when typing
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg(""); // Reset error before submission
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setErrorMsg("");
 
-    const formBody = new URLSearchParams({
-      username: credentials.username,
-      password: credentials.password,
+  const formBody = new URLSearchParams({
+    username: credentials.username,
+    password: credentials.password,
+  });
+
+  try {
+    const res = await retryFetch("https://libarybackend.vercel.app/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: formBody.toString(),
     });
 
-    try {
-      const res = await retryFetch("https://libarybackend.vercel.app/login", {
-        method: "POST",
+    const data = await res.json();
+
+    if (!data.access_token) throw new Error("Missing access token");
+
+    localStorage.setItem("access_token", data.access_token);
+    localStorage.setItem("role", role);
+
+    const userRes = await retryFetch(
+      "https://libarybackend.vercel.app/users/me/",
+      {
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Bearer ${data.access_token}`,
           Accept: "application/json",
         },
-        body: formBody.toString(),
-      });
-
-      const data = await res.json();
-
-      if (!data.access_token) throw new Error("Missing access token");
-
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("role", role);
-
-      const userRes = await retryFetch(
-        "https://libarybackend.vercel.app/users/me/",
-        {
-          headers: {
-            Authorization: `Bearer ${data.access_token}`,
-            Accept: "application/json",
-          },
-        }
-      );
-
-      if (!userRes.ok) {
-        throw new Error("Failed to fetch user profile");
       }
+    );
 
-      const userData = await userRes.json();
-
-      login(userData, data.access_token);
-      toast.success("Login successful!");
-      navigate(`/${role}/dashboard`);
-    } catch (err) {
-      const fallback = "Invalid username or password.";
-      try {
-        const errorData = await err?.json?.();
-        const message = errorData?.detail || fallback;
-        toast.error(message);
-        setErrorMsg(message);
-      } catch {
-        toast.error(err.message || fallback);
-        setErrorMsg(err.message || fallback);
-      }
-    } finally {
-      setLoading(false);
+    if (!userRes.ok) {
+      throw new Error("Failed to fetch user profile");
     }
-  };
+
+    const userData = await userRes.json();
+
+    await login(userData, data.access_token);
+
+    toast.success("Login successful!");
+    setTimeout(() => {
+      navigate(`/${role}/dashboard`);
+    }, 100); 
+  } catch (err) {
+    const fallback = "Invalid username or password.";
+    try {
+      const errorData = await err?.json?.();
+      const message = errorData?.detail || fallback;
+      toast.error(message);
+      setErrorMsg(message);
+    } catch {
+      toast.error(err.message || fallback);
+      setErrorMsg(err.message || fallback);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div ref={containerRef}>
