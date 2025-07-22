@@ -9,6 +9,7 @@ import StaffDashboardView from "./components/staff/StaffDashboardView";
 import StudentDashboardView from "./components/student/StudentDashboardView";
 import Books from "./components/Books";
 import { Toaster } from "react-hot-toast";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
@@ -56,6 +57,8 @@ export default function App() {
           <Route path="catalog" element={<Catalog />} />
           <Route path="books" element={<Books />} />
         </Route>
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );

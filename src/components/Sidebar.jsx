@@ -15,7 +15,6 @@ const navLinks = {
     { label: "Dashboard", icon: LayoutDashboard, to: "/staff/dashboard" },
     { label: "Catalog", icon: BookOpen, to: "/staff/catalog" },
     { label: "Books", icon: Book, to: "/staff/books" },
-    { label: "Users", icon: Users, to: "/staff/users" },
   ],
 };
 
