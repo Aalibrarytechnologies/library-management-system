@@ -34,94 +34,85 @@ export default function Signup() {
     setError("");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-      setError("All fields are required.");
-      return;
+  if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+    setError("All fields are required.");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+
+  const payload = {
+    full_name: form.name.trim(),
+    email: form.email.trim(),
+    role, // role from URL
+    password: form.password,
+  };
+
+  try {
+    const res = await retryFetch("https://libarybackend.vercel.app/users/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData?.detail || "Signup failed");
     }
 
-    setLoading(true);
-    setError("");
+    const data = await res.json();
 
-    const payload = {
-      full_name: form.name.trim(),
-      email: form.email.trim(),
-      role,
-      password: form.password,
-    };
-
-    try {
-      const res = await retryFetch("https://libarybackend.vercel.app/users/", {
+    // Auto-login after signup
+    const loginRes = await retryFetch(
+      "https://libarybackend.vercel.app/login",
+      {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json",
         },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        // 🔎 Flexible error parsing
-        let message = "Signup failed";
-        if (typeof data.detail === "string") {
-          message = data.detail;
-        } else if (Array.isArray(data.detail)) {
-          message = data.detail.map((d) => d.msg).join(", ");
-        } else if (data.message) {
-          message = data.message;
-        }
-        throw new Error(message);
+        body: new URLSearchParams({
+          username: form.email,
+          password: form.password,
+        }),
       }
+    );
 
-      // ✅ Auto-login after signup
-      const loginRes = await retryFetch(
-        "https://libarybackend.vercel.app/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
-          body: new URLSearchParams({
-            username: form.email,
-            password: form.password,
-          }).toString(),
-        }
-      );
+    const loginData = await loginRes.json();
+    if (!loginData.access_token) throw new Error("Auto-login failed");
 
-      const loginData = await loginRes.json();
+    // Fetch user
+    const userRes = await retryFetch(
+      "https://libarybackend.vercel.app/users/me/",
+      {
+        headers: {
+          Authorization: `Bearer ${loginData.access_token}`,
+          Accept: "application/json",
+        },
+      }
+    );
 
-      if (!loginData.access_token) throw new Error("Login failed after signup");
+    const userData = await userRes.json();
 
-      const userRes = await retryFetch(
-        "https://libarybackend.vercel.app/users/me/",
-        {
-          headers: {
-            Authorization: `Bearer ${loginData.access_token}`,
-            Accept: "application/json",
-          },
-        }
-      );
+    await login(userData, loginData.access_token);
 
-      const userData = await userRes.json();
-      login(userData, loginData.access_token);
-
-      toast.success("Signup successful!");
-      navigate(`/${role}/dashboard`);
-    } catch (err) {
-      const errorData =
-        err instanceof Response ? await err.json().catch(() => null) : null;
-      const message = errorData?.detail || err.message || "Signup failed";
-
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Redirect to correct dashboard (in case role in backend differs from URL)
+    const actualRole = userData.role;
+    navigate(`/${actualRole}/dashboard`);
+    toast.success("Signup successful!");
+  } catch (err) {
+    setError(err.message || "Something went wrong.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div ref={containerRef}>

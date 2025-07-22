@@ -15,8 +15,12 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  if (!token || user?.role !== currentRole) {
+  if (!token || !user) {
     return <Navigate to={`/${currentRole}/login`} replace />;
+  }
+
+  if (user?.role && user.role !== currentRole) {
+    return <Navigate to={`/${user.role}/login`} replace />;
   }
 
   return children;
