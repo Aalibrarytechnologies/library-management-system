@@ -108,7 +108,7 @@ export default function Books() {
   );
 
   if (loading) {
-    return <AppLoader message="Loading books..." />; // ✅ full-page loader
+    return <AppLoader message="Loading books..." />; 
   }
 
   return (
@@ -122,7 +122,7 @@ export default function Books() {
         {isStaff && (
           <div className="flex gap-4 truncate">
             <button
-              className={`px-3 py-1 rounded-lg ${
+              className={`px-3 py-1 cursor-pointer rounded-lg ${
                 activeTab === "manage"
                   ? "bg-black text-white dark:bg-white dark:text-black"
                   : "bg-gray-200 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
@@ -132,7 +132,7 @@ export default function Books() {
               Manage Books
             </button>
             <button
-              className={`px-3 py-1 rounded-lg ${
+              className={`px-3 py-1 cursor-pointer rounded-lg ${
                 activeTab === "borrow"
                   ? "bg-black text-white dark:bg-white dark:text-black"
                   : "bg-gray-200 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
@@ -159,7 +159,7 @@ export default function Books() {
                     setShowAcquireModal(true);
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
+                className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
               >
                 {isStaff ? (
                   <Plus className="w-4 h-4" />
@@ -177,7 +177,7 @@ export default function Books() {
                 selectedBooks.length > 0 && (
                   <button
                     onClick={() => setSelectedBooks([])}
-                    className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:underline"
+                    className="px-3 cursor-pointer py-2 text-sm text-gray-600 dark:text-gray-300 hover:underline"
                   >
                     Clear All
                   </button>
@@ -192,7 +192,7 @@ export default function Books() {
                   setLimit(Number(e.target.value));
                   setSkip(0);
                 }}
-                className="bg-transparent text-sm outline-none dark:text-white"
+                className="bg-transparent cursor-pointer text-sm outline-none dark:text-white"
               >
                 {[5, 10, 20, 50].map((opt) => (
                   <option
@@ -315,7 +315,7 @@ export default function Books() {
       {/* Pagination */}
       <div className="flex justify-between mt-4">
         <button
-          className="px-3 py-1 border rounded-lg disabled:opacity-50"
+          className="px-3 py-1 cursor-pointer border rounded-lg disabled:opacity-50"
           disabled={skip === 0}
           onClick={() => setSkip(skip - limit)}
         >
@@ -325,7 +325,7 @@ export default function Books() {
           Page {currentPage} of {totalPages}
         </span>
         <button
-          className="px-3 py-1 border rounded-lg disabled:opacity-50"
+          className="px-3 py-1 cursor-pointer border rounded-lg disabled:opacity-50"
           disabled={skip + limit >= totalBooks}
           onClick={() => setSkip(skip + limit)}
         >

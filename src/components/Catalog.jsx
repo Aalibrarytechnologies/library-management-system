@@ -7,7 +7,7 @@ import ReceiptModal from "../components/ReceiptModal";
 import ConfirmationModal from "../components/ConfirmationModal";
 import DatePicker from "react-datepicker";
 import { useLocation, useNavigate } from "react-router-dom";
-import AppLoader from "../components/AppLoader"; // ✅ import
+import AppLoader from "../components/AppLoader";
 
 export default function Catalog() {
   const { token, user, logout } = useUserContext();
@@ -212,8 +212,8 @@ export default function Catalog() {
       toast.success("Book renewed successfully.");
       setReloadFlag((prev) => !prev);
       setShowConfirm(false);
-      setRenewingBookId(null); // ✅ Reset state
-      setRenewDate(null); // ✅ Reset state
+      setRenewingBookId(null);
+      setRenewDate(null);
     } catch (err) {
       if (err?.type === "AUTH_ERROR") {
         toast.error("Session expired. Please log in again.");
@@ -240,7 +240,7 @@ export default function Catalog() {
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("borrowed")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 cursor-pointer rounded-lg text-sm font-medium transition-colors ${
               activeTab === "borrowed"
                 ? "bg-black text-white dark:bg-white dark:text-black"
                 : "bg-gray-200 dark:bg-zinc-700 text-black dark:text-white"
@@ -250,7 +250,7 @@ export default function Catalog() {
           </button>
           <button
             onClick={() => setActiveTab(isStaff ? "overdue" : "returned")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 cursor-pointer rounded-lg text-sm font-medium transition-colors ${
               activeTab === (isStaff ? "overdue" : "returned")
                 ? "bg-black text-white dark:bg-white dark:text-black"
                 : "bg-gray-200 dark:bg-zinc-700 text-black dark:text-white"
@@ -297,7 +297,7 @@ export default function Catalog() {
                 <td className="px-4 py-3">
                   {!isOverdue(book.due_date) ? (
                     <button
-                      className="text-purple-600 hover:underline"
+                      className="text-purple-600 cursor-pointer hover:underline"
                       onClick={() => {
                         setConfirmTitle("Renew Book");
                         setRenewDate(new Date());
@@ -313,7 +313,7 @@ export default function Catalog() {
                   )}
                   {activeTab === "borrowed" ? (
                     <button
-                      className="ml-4 text-blue-600 hover:underline"
+                      className="ml-4 cursor-pointer text-blue-600 hover:underline"
                       onClick={() => {
                         setConfirmTitle("Return Book");
                         setConfirmMessage(
@@ -328,7 +328,7 @@ export default function Catalog() {
                   ) : (
                     <div className="flex gap-2 items-center">
                       <button
-                        className="text-green-600 hover:underline"
+                        className="text-green-600 cursor-pointer hover:underline"
                         onClick={() => {
                           setConfirmTitle("Rebook Book");
                           setConfirmMessage(
@@ -340,7 +340,10 @@ export default function Catalog() {
                       >
                         Rebook
                       </button>
-                      <button onClick={() => handleShowReceipt(book.book_id)}>
+                      <button
+                        className="cursor-pointer"
+                        onClick={() => handleShowReceipt(book.book_id)}
+                      >
                         <ReceiptIcon className="w-5 h-5 text-blue-500 hover:text-blue-700" />
                       </button>
                     </div>

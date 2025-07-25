@@ -58,7 +58,7 @@ export default function SettingsModal({ onClose }) {
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-2">
           <h2 className="text-lg font-semibold">Account Settings</h2>
-          <button onClick={onClose}>
+          <button className="cursor-pointer" onClick={onClose}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -93,7 +93,7 @@ export default function SettingsModal({ onClose }) {
 
           <button
             type="submit"
-            className="w-full py-2 bg-black text-white dark:bg-white dark:text-black rounded hover:opacity-90 transition-colors"
+            className="w-full cursor-pointer py-2 bg-black text-white dark:bg-white dark:text-black rounded hover:opacity-90 transition-colors"
           >
             Save Changes
           </button>

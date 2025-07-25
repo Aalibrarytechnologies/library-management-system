@@ -43,7 +43,7 @@ export default function DeleteConfirmModal({ bookId, onClose }) {
           <h2 className="text-lg font-semibold text-black dark:text-white">
             Confirm Deletion
           </h2>
-          <button onClick={() => onClose(false)}>
+          <button className="cursor-pointer" onClick={() => onClose(false)}>
             <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
@@ -56,14 +56,16 @@ export default function DeleteConfirmModal({ bookId, onClose }) {
         <div className="flex justify-end gap-3">
           <button
             onClick={() => onClose(false)}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+            className="px-4 cursor-pointer py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
           >
             Cancel
           </button>
           <button
             onClick={handleDelete}
             disabled={loading}
-            className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-1"
+            className={`px-4 py-2 ${
+              loading ? "cursor-not-allowed" : "cursor-pointer"
+            } text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-1`}
           >
             <Trash2 className="w-4 h-4" />
             {loading ? "Deleting..." : "Delete"}

@@ -15,7 +15,7 @@ export default function LayoutHeader({ toggleSidebar, onOpenSettings }) {
   return (
     <header className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black shadow-sm">
       <div className="flex items-center gap-4">
-        <button onClick={toggleSidebar} className="md:hidden">
+        <button onClick={toggleSidebar} className="md:hidden cursor-pointer">
           <Menu className="w-6 h-6" />
         </button>
 
@@ -35,7 +35,7 @@ export default function LayoutHeader({ toggleSidebar, onOpenSettings }) {
         <span className="text-sm hidden sm:inline">
           {format(dateTime, "EEEE, MMMM do yyyy — h:mm a")}
         </span>
-        <button onClick={onOpenSettings}>
+        <button className="cursor-pointer" onClick={onOpenSettings}>
           <Settings className="w-6 h-6" />
         </button>
       </div>

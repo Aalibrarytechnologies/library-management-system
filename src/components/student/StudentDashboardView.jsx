@@ -155,7 +155,6 @@ export default function StudentDashboardView() {
                     />
                   </div>
 
-                  {/* ✅ Truncated title */}
                   <div className="text-sm font-medium text-black dark:text-white mb-1 w-full truncate whitespace-nowrap overflow-hidden max-w-[6rem] sm:max-w-full">
                     {book.title}
                   </div>
@@ -166,7 +165,7 @@ export default function StudentDashboardView() {
 
                   <button
                     onClick={() => handleQuickBorrow(book.id)}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    className="text-xs cursor-pointer text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Borrow now
                   </button>

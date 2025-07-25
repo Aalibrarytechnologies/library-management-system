@@ -51,88 +51,90 @@ export default function AcquireModal({
     setBooks((prev) => prev.filter((book) => book.id !== id));
   };
 
-const handleBorrow = async () => {
-  if (!dueDate) {
-    toast.error("Please select a due date.");
-    return;
-  }
-
-  setLoading(true);
-  try {
-    // 1. Fetch user's borrow history
-    const historyRes = await retryFetch(
-      "https://libarybackend.vercel.app/users/me/borrow_history/",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    const history = await historyRes.json();
-    const borrowedBookIds = new Set(history.map((b) => b.book_id));
-
-    // 2. Filter out duplicates
-    const booksToBorrow = books.filter((book) => !borrowedBookIds.has(book.id));
-
-    if (booksToBorrow.length === 0) {
-      toast.error("You’ve already borrowed all selected books.");
-      setLoading(false);
+  const handleBorrow = async () => {
+    if (!dueDate) {
+      toast.error("Please select a due date.");
       return;
     }
 
-    const borrowPromises = booksToBorrow.map((book) =>
-      fetch("https://libarybackend.vercel.app/borrow/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          book_id: book.id,
-          user_id: user.id,
-          due_date: dueDate.toISOString().split("T")[0],
-          returned_date: null,
-        }),
-      })
-    );
+    setLoading(true);
+    try {
+      // 1. Fetch user's borrow history
+      const historyRes = await retryFetch(
+        "https://libarybackend.vercel.app/users/me/borrow_history/",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const history = await historyRes.json();
+      const borrowedBookIds = new Set(history.map((b) => b.book_id));
 
-    const results = await Promise.all(borrowPromises);
+      // 2. Filter out duplicates
+      const booksToBorrow = books.filter(
+        (book) => !borrowedBookIds.has(book.id)
+      );
 
-    const errors = [];
-    for (let i = 0; i < results.length; i++) {
-      const res = results[i];
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(
-          `Failed to borrow "${booksToBorrow[i].title}":`,
-          errorText
-        );
-        errors.push(booksToBorrow[i].title);
+      if (booksToBorrow.length === 0) {
+        toast.error("You’ve already borrowed all selected books.");
+        setLoading(false);
+        return;
       }
+
+      const borrowPromises = booksToBorrow.map((book) =>
+        fetch("https://libarybackend.vercel.app/borrow/", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            book_id: book.id,
+            user_id: user.id,
+            due_date: dueDate.toISOString().split("T")[0],
+            returned_date: null,
+          }),
+        })
+      );
+
+      const results = await Promise.all(borrowPromises);
+
+      const errors = [];
+      for (let i = 0; i < results.length; i++) {
+        const res = results[i];
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error(
+            `Failed to borrow "${booksToBorrow[i].title}":`,
+            errorText
+          );
+          errors.push(booksToBorrow[i].title);
+        }
+      }
+
+      const successful = results.length - errors.length;
+      const failed = errors.length;
+
+      if (successful > 0 && failed === 0) {
+        toast.success("All books borrowed successfully!");
+      } else if (successful > 0 && failed > 0) {
+        toast.success(`${successful} book(s) borrowed, ${failed} failed.`);
+        toast.error(`Failed: ${errors.join(", ")}`);
+      } else {
+        toast.error("Failed to borrow any books.");
+      }
+
+      setSelectedBooks([]);
+      triggerUserRefetch();
+      onBorrowSuccess?.();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to borrow books.");
+    } finally {
+      setLoading(false);
     }
-
-    const successful = results.length - errors.length;
-    const failed = errors.length;
-
-    if (successful > 0 && failed === 0) {
-      toast.success("All books borrowed successfully!");
-    } else if (successful > 0 && failed > 0) {
-      toast.success(`${successful} book(s) borrowed, ${failed} failed.`);
-      toast.error(`Failed: ${errors.join(", ")}`);
-    } else {
-      toast.error("Failed to borrow any books.");
-    }
-
-    setSelectedBooks([]);
-    triggerUserRefetch();
-    onBorrowSuccess?.();
-    onClose();
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to borrow books.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
@@ -141,7 +143,7 @@ const handleBorrow = async () => {
           <h2 className="text-lg font-semibold text-black dark:text-white">
             Confirm Book Borrow
           </h2>
-          <button onClick={onClose}>
+          <button className="cursor-pointer" onClick={onClose}>
             <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
@@ -194,7 +196,7 @@ const handleBorrow = async () => {
                 </div>
                 <button
                   onClick={() => handleRemove(book.id)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 cursor-pointer hover:text-red-700"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -206,14 +208,16 @@ const handleBorrow = async () => {
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+            className="px-4 cursor-pointer py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
           >
             Cancel
           </button>
           <button
             onClick={handleBorrow}
             disabled={loading || books.length === 0}
-            className="px-4 py-2 text-sm rounded-lg bg-black dark:bg-white dark:text-black text-white flex items-center gap-1"
+            className={`px-4 py-2 ${
+              loading ? "cursor-not-allowed" : "cursor-pointer"
+            } text-sm rounded-lg bg-black dark:bg-white dark:text-black text-white flex items-center gap-1`}
           >
             <BookOpen className="w-4 h-4" />
             {loading ? "Borrowing..." : "Confirm"}

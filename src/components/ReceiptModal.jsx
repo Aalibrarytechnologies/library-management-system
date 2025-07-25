@@ -26,7 +26,7 @@ export default function ReceiptModal({ onClose, book }) {
         <div className="mt-6 text-right">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-md bg-black dark:bg-white text-white dark:text-black font-semibold hover:opacity-90"
+            className="px-4 py-2 cursor-pointer rounded-md bg-black dark:bg-white text-white dark:text-black font-semibold hover:opacity-90"
           >
             Close
           </button>

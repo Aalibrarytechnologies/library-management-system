@@ -25,14 +25,16 @@ export default function ConfirmationModal({
         <div className="flex justify-center gap-4">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-700"
+            className="px-4 py-2 cursor-pointer rounded-md border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-700"
             disabled={loading}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 rounded-md bg-black dark:bg-white text-white dark:text-black font-semibold hover:opacity-90"
+            className={`px-4 py-2 ${
+              loading ? "cursor-not-allowed" : "cursor-pointer"
+            } rounded-md bg-black dark:bg-white text-white dark:text-black font-semibold hover:opacity-90`}
             disabled={loading}
           >
             {loading ? "Processing..." : "Confirm"}

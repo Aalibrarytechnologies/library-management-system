@@ -24,7 +24,7 @@ export default function Login() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(""); // 👈 Inline error state
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     gsap.fromTo(
@@ -36,7 +36,7 @@ export default function Login() {
 
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
-    setErrorMsg(""); // Clear inline error when typing
+    setErrorMsg(""); 
   };
 
   const handleSubmit = async (e) => {

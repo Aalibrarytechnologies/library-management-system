@@ -17,7 +17,7 @@ export default function NotFound() {
 
       <button
         onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-2 px-5 py-2 border border-black dark:border-white rounded-full text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors duration-300"
+        className="inline-flex cursor-pointer items-center gap-2 px-5 py-2 border border-black dark:border-white rounded-full text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors duration-300"
       >
         <ArrowLeftCircle size={20} />
         Go Back

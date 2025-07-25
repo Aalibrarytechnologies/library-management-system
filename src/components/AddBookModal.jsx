@@ -54,7 +54,7 @@ export default function AddBookModal({ onClose }) {
           <h2 className="text-lg font-semibold text-black dark:text-white">
             Add a New Book
           </h2>
-          <button onClick={onClose}>
+          <button className="cursor-pointer" onClick={onClose}>
             <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
@@ -84,14 +84,16 @@ export default function AddBookModal({ onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+              className="px-4 py-2 cursor-pointer text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
+              className={`px-4 py-2 ${
+                loading ? "cursor-not-allowed" : "cursor-pointer"
+              } text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90`}
             >
               {loading ? "Adding..." : "Add Book"}
             </button>
