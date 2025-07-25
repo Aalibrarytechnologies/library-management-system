@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 @import "react-datepicker/dist/react-datepicker.css";
+@plugin 'tailwind-scrollbar';
 
 body {
   font-family: "Montserrat", system-ui, sans-serif;

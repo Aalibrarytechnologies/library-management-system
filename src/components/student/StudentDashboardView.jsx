@@ -9,6 +9,9 @@ import { phrases } from "../../data/phrases";
 import black_logo from "../../assets/black_logo.png";
 import white_logo from "../../assets/white_logo.png";
 import { retryFetch } from "../../utils/retryFetch";
+import book_image from "../../assets/Image.png";
+import AcquireModal from "../AcquireModal";
+import AppLoader from "../AppLoader";
 
 export default function StudentDashboardView() {
   const { user, token } = useUserContext();
@@ -18,6 +21,10 @@ export default function StudentDashboardView() {
   const [borrowStats, setBorrowStats] = useState({ borrowed: 0, returned: 0 });
   const [quote, setQuote] = useState("");
   const [recommendations, setRecommendations] = useState([]);
+
+  const [showModal, setShowModal] = useState(false);
+  const [selectedBookIds, setSelectedBookIds] = useState([]);
+  const [loading, setLoading] = useState(true); // ✅
 
   useEffect(() => {
     const phraseIndex = parseInt(
@@ -31,40 +38,90 @@ export default function StudentDashboardView() {
     );
   }, []);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [borrowedRes, historyRes] = await Promise.all([
-          retryFetch(
-            "https://libarybackend.vercel.app/users/me/borrowed_books/",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
-          retryFetch(
-            "https://libarybackend.vercel.app/users/me/borrow_history/",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
-        ]);
-        const borrowedBooks = await borrowedRes.json();
-        const borrowHistory = await historyRes.json();
+  const fetchStatsAndRecommendations = async () => {
+    try {
+      setLoading(true); // ✅ start loading
 
-        const returned = borrowHistory.length - borrowedBooks.length;
-        setBorrowStats({
-          borrowed: borrowedBooks.length,
-          returned: Math.max(returned, 0),
-        });
-      } catch (err) {
-        toast.error("Unable to load book stats. Please retry.");
+      const historyRes = await retryFetch(
+        "https://libarybackend.vercel.app/users/me/borrow_history/",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const allBooksRes = await retryFetch(
+        "https://libarybackend.vercel.app/books/?skip=0&limit=10000",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const borrowHistory = await historyRes.json();
+      const allBooks = await allBooksRes.json();
+
+      const borrowed = borrowHistory.filter((b) => !b.returned_date).length;
+      const returned = borrowHistory.filter((b) => b.returned_date).length;
+      setBorrowStats({ borrowed, returned });
+
+      const activeBorrowedIds = new Set(
+        borrowHistory.filter((b) => !b.returned_date).map((b) => b.book_id)
+      );
+
+      const genreCount = {};
+      for (let record of borrowHistory) {
+        const book = allBooks.find((b) => b.id === record.book_id);
+        if (book?.genre) {
+          genreCount[book.genre] = (genreCount[book.genre] || 0) + 1;
+        }
       }
-    };
 
-    if (user && token) fetchStats();
+      const topGenres = Object.entries(genreCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([genre]) => genre)
+        .slice(0, 3);
+
+      const genreMatches = allBooks.filter(
+        (book) =>
+          topGenres.includes(book.genre) && !activeBorrowedIds.has(book.id)
+      );
+
+      let finalSuggestions = [];
+
+      if (genreMatches.length >= 5) {
+        finalSuggestions = genreMatches
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 5);
+      } else {
+        const unborrowedBooks = allBooks.filter(
+          (book) => !activeBorrowedIds.has(book.id)
+        );
+        finalSuggestions = unborrowedBooks
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 5);
+      }
+
+      setRecommendations(finalSuggestions);
+    } catch (err) {
+      console.error(err);
+      toast.error("Unable to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && token) fetchStatsAndRecommendations();
   }, [user, token]);
 
   const handleNav = (tab) => navigate(`/student/catalog?tab=${tab}`);
+
+  const handleQuickBorrow = (bookId) => {
+    setSelectedBookIds([bookId]);
+    setShowModal(true);
+  };
+
+  if (loading) {
+    return <AppLoader message="Loading dashboard..." />;
+  }
 
   return (
     <div className="w-full flex flex-col h-full justify-between px-4 py-6 sm:px-8">
@@ -84,16 +141,35 @@ export default function StudentDashboardView() {
               No recommendations available yet.
             </p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {recommendations.map((book, i) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {recommendations.map((book) => (
                 <div
-                  key={i}
-                  className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-xl flex flex-col items-center"
+                  key={book.id}
+                  className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-xl flex flex-col items-center text-center"
                 >
-                  <div className="w-16 h-24 bg-gray-300 dark:bg-zinc-700 mb-2 rounded" />
-                  <div className="text-sm text-black dark:text-white">
+                  <div className="w-16 h-24 bg-gray-300 dark:bg-zinc-700 mb-2">
+                    <img
+                      className="w-full h-full object-cover rounded"
+                      src={book_image}
+                      alt="Image of book"
+                    />
+                  </div>
+
+                  {/* ✅ Truncated title */}
+                  <div className="text-sm font-medium text-black dark:text-white mb-1 w-full truncate whitespace-nowrap overflow-hidden max-w-[6rem] sm:max-w-full">
                     {book.title}
                   </div>
+
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    {book.author}
+                  </div>
+
+                  <button
+                    onClick={() => handleQuickBorrow(book.id)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Borrow now
+                  </button>
                 </div>
               ))}
             </div>
@@ -135,6 +211,19 @@ export default function StudentDashboardView() {
           “{quote}”
         </div>
       </div>
+
+      {showModal && (
+        <AcquireModal
+          selectedBookIds={selectedBookIds}
+          setSelectedBooks={() => setSelectedBookIds([])}
+          onClose={() => setShowModal(false)}
+          onBorrowSuccess={() => {
+            setSelectedBookIds([]);
+            setShowModal(false);
+            fetchStatsAndRecommendations();
+          }}
+        />
+      )}
     </div>
   );
 }

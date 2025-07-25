@@ -18,7 +18,7 @@ const navLinks = {
   ],
 };
 
-export default function Sidebar({ open, role }) {
+export default function Sidebar({ open, setSidebarOpen, role }) {
   const { user, logout } = useUserContext();
   const { theme } = useThemeContext();
   const navigate = useNavigate();
@@ -54,6 +54,9 @@ export default function Sidebar({ open, role }) {
           <NavLink
             key={label}
             to={to}
+            onClick={() => {
+              if (window.innerWidth < 768) setSidebarOpen(false); // ✅ auto close on small screens
+            }}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive

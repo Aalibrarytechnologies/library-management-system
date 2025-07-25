@@ -10,13 +10,13 @@ import { BooksProvider } from "./context/BooksContext.jsx";
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ThemeProvider>
-      <BooksProvider>
-        <UserProvider>
+      <UserProvider>
+        <BooksProvider>
           <BrowserRouter>
             <App />
           </BrowserRouter>
-        </UserProvider>
-      </BooksProvider>
+        </BooksProvider>
+      </UserProvider>
     </ThemeProvider>
   </StrictMode>
 );

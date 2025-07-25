@@ -4,6 +4,7 @@ import { useUserContext } from "../context/UserContext";
 import { X, BookOpen, Trash2 } from "lucide-react";
 import { retryFetch } from "../utils/retryFetch";
 import DatePicker from "react-datepicker";
+import { useNavigate } from "react-router";
 
 export default function AcquireModal({
   selectedBookIds = [],
@@ -11,10 +12,11 @@ export default function AcquireModal({
   onBorrowSuccess,
   setSelectedBooks,
 }) {
-  const { token, user } = useUserContext();
   const [books, setBooks] = useState([]);
   const [dueDate, setDueDate] = useState(null);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { token, user, triggerUserRefetch } = useUserContext();
 
   // Fetch full book details
   useEffect(() => {
@@ -32,8 +34,12 @@ export default function AcquireModal({
         const bookData = await Promise.all(responses.map((res) => res.json()));
         setBooks(bookData);
       } catch (err) {
-        console.error("Error fetching book details:", err);
-        toast.error("Failed to load selected books.");
+        if (err?.type === "AUTH_ERROR") {
+          toast.error("Session expired. Please log in again.");
+          navigate(`/${user?.role || "student"}/login`);
+          return;
+        }
+        toast.error("Failed to load data.");
       }
     };
 
@@ -45,67 +51,88 @@ export default function AcquireModal({
     setBooks((prev) => prev.filter((book) => book.id !== id));
   };
 
-  const handleBorrow = async () => {
-    if (!dueDate) {
-      toast.error("Please select a due date.");
+const handleBorrow = async () => {
+  if (!dueDate) {
+    toast.error("Please select a due date.");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // 1. Fetch user's borrow history
+    const historyRes = await retryFetch(
+      "https://libarybackend.vercel.app/users/me/borrow_history/",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const history = await historyRes.json();
+    const borrowedBookIds = new Set(history.map((b) => b.book_id));
+
+    // 2. Filter out duplicates
+    const booksToBorrow = books.filter((book) => !borrowedBookIds.has(book.id));
+
+    if (booksToBorrow.length === 0) {
+      toast.error("You’ve already borrowed all selected books.");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-      const borrowPromises = books.map((book) =>
-        fetch("https://libarybackend.vercel.app/borrow/", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            book_id: book.id,
-            user_id: user.id,
-            due_date: dueDate?.toISOString().split("T")[0],
-            returned_date: null,
-          }),
-        })
-      );
+    const borrowPromises = booksToBorrow.map((book) =>
+      fetch("https://libarybackend.vercel.app/borrow/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          book_id: book.id,
+          user_id: user.id,
+          due_date: dueDate.toISOString().split("T")[0],
+          returned_date: null,
+        }),
+      })
+    );
 
-      const results = await Promise.all(borrowPromises);
+    const results = await Promise.all(borrowPromises);
 
-      const errors = [];
-      for (let i = 0; i < results.length; i++) {
-        const res = results[i];
-        if (!res.ok) {
-          const errorText = await res.text(); // try to get raw error for debugging
-          console.error(`Failed to borrow "${books[i].title}":`, errorText);
-          errors.push(books[i].title);
-        }
+    const errors = [];
+    for (let i = 0; i < results.length; i++) {
+      const res = results[i];
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(
+          `Failed to borrow "${booksToBorrow[i].title}":`,
+          errorText
+        );
+        errors.push(booksToBorrow[i].title);
       }
-
-      const successful = results.length - errors.length;
-      const failed = errors.length;
-
-      if (successful > 0 && failed === 0) {
-        toast.success("All books borrowed successfully!");
-        setSelectedBooks([]);
-        onBorrowSuccess?.();
-        onClose();
-      } else if (successful > 0 && failed > 0) {
-        toast.success(`${successful} book(s) borrowed, ${failed} failed.`);
-        toast.error(`Failed: ${errors.join(", ")}`);
-        setSelectedBooks([]);
-        onBorrowSuccess?.();
-        onClose();
-      } else {
-        toast.error("Failed to borrow any books.");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to borrow books.");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const successful = results.length - errors.length;
+    const failed = errors.length;
+
+    if (successful > 0 && failed === 0) {
+      toast.success("All books borrowed successfully!");
+    } else if (successful > 0 && failed > 0) {
+      toast.success(`${successful} book(s) borrowed, ${failed} failed.`);
+      toast.error(`Failed: ${errors.join(", ")}`);
+    } else {
+      toast.error("Failed to borrow any books.");
+    }
+
+    setSelectedBooks([]);
+    triggerUserRefetch();
+    onBorrowSuccess?.();
+    onClose();
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to borrow books.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">

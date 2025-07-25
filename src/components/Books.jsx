@@ -11,6 +11,7 @@ import { useUserContext } from "../context/UserContext";
 import { retryFetch } from "../utils/retryFetch";
 import toast from "react-hot-toast";
 import { lazy, Suspense } from "react";
+import AppLoader from "../components/AppLoader";
 
 const AddBookModal = lazy(() => import("../components/AddBookModal"));
 const UpdateBookModal = lazy(() => import("../components/UpdateBookModal"));
@@ -19,6 +20,7 @@ const DeleteConfirmModal = lazy(() =>
   import("../components/DeleteConfirmModal")
 );
 import { useBooksContext } from "../context/BooksContext";
+import { useNavigate } from "react-router";
 
 export default function Books() {
   const { user, token } = useUserContext();
@@ -40,6 +42,8 @@ export default function Books() {
 
   const totalPages = Math.ceil(totalBooks / limit);
   const currentPage = Math.floor(skip / limit) + 1;
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   // Debounce search input
   useEffect(() => {
@@ -49,6 +53,8 @@ export default function Books() {
 
   const fetchBooks = async () => {
     try {
+      setLoading(true); // ✅ start loading
+
       const pageRes = await retryFetch(
         `https://libarybackend.vercel.app/books/?skip=${skip}&limit=${limit}`,
         {
@@ -67,7 +73,14 @@ export default function Books() {
       const allBooks = await countRes.json();
       setTotalBooks(allBooks.length);
     } catch (err) {
-      toast.error("Failed to fetch books.");
+      if (err?.type === "AUTH_ERROR") {
+        toast.error("Session expired. Please log in again.");
+        navigate(`/${user?.role || "student"}/login`);
+      } else {
+        toast.error("Failed to load data.");
+      }
+    } finally {
+      setLoading(false); // ✅ end loading
     }
   };
 
@@ -82,7 +95,6 @@ export default function Books() {
     }
   }, [isStaff, activeTab]);
 
-
   const handleSelect = (id) =>
     setSelectedBooks((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -95,6 +107,10 @@ export default function Books() {
       book.genre.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
+  if (loading) {
+    return <AppLoader message="Loading books..." />; // ✅ full-page loader
+  }
+
   return (
     <div className="px-4 sm:px-8 py-6 space-y-6">
       {/* Top bar */}
@@ -104,7 +120,7 @@ export default function Books() {
         </h2>
 
         {isStaff && (
-          <div className="flex gap-4">
+          <div className="flex gap-4 truncate">
             <button
               className={`px-3 py-1 rounded-lg ${
                 activeTab === "manage"
@@ -128,7 +144,7 @@ export default function Books() {
           </div>
         )}
 
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-wrap gap-4 items-start sm:items-center">
           <div className="flex gap-2">
             <div className="flex items-center gap-2">
               <button
@@ -168,17 +184,27 @@ export default function Books() {
                 )}
             </div>
 
-            <button
-              className="flex items-center gap-1 px-3 py-2 border rounded-lg bg-gray-50 dark:bg-zinc-800"
-              onClick={() => {
-                const next = [5, 10, 20].find((n) => n > limit) || 5;
-                setLimit(next);
-                setSkip(0);
-              }}
-            >
+            <div className="flex items-center gap-1 px-3 py-2 border rounded-lg bg-gray-50 dark:bg-zinc-800">
               <Filter className="w-4 h-4" />
-              Limit: {limit}
-            </button>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setSkip(0);
+                }}
+                className="bg-transparent text-sm outline-none dark:text-white"
+              >
+                {[5, 10, 20, 50].map((opt) => (
+                  <option
+                    key={opt}
+                    value={opt}
+                    className="dark:bg-zinc-800 dark:text-white"
+                  >
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="relative w-full sm:w-64">

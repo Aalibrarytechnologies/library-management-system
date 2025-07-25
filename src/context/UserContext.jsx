@@ -6,18 +6,19 @@ const UserContext = createContext();
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true); // NEW
+  const [loading, setLoading] = useState(true);
+  const [reloadUserData, setReloadUserData] = useState(false); // ✅ NEW
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage on mount or when reload is triggered
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token");
     if (storedToken) {
       setToken(storedToken);
-      fetchUser(storedToken).finally(() => setLoading(false)); // NEW
+      fetchUser(storedToken).finally(() => setLoading(false));
     } else {
-      setLoading(false); // NEW
+      setLoading(false);
     }
-  }, []);
+  }, [reloadUserData]); // ✅ DEPENDENCY ADDED HERE
 
   // Fetch authenticated user's profile
   const fetchUser = async (authToken) => {
@@ -37,7 +38,7 @@ export const UserProvider = ({ children }) => {
       localStorage.setItem("user", JSON.stringify(userData));
     } catch (err) {
       console.error("Error loading user:", err);
-      logout();
+      logout(); // Invalidate session on failure
     }
   };
 
@@ -50,7 +51,6 @@ export const UserProvider = ({ children }) => {
       resolve();
     });
   };
-
 
   const logout = () => {
     setUser(null);
@@ -82,9 +82,22 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // ✅ Force user rehydration manually
+  const triggerUserRefetch = () => {
+    setReloadUserData((prev) => !prev);
+  };
+
   return (
     <UserContext.Provider
-      value={{ user, token, loading, login, logout, updateUser }}
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        logout,
+        updateUser,
+        triggerUserRefetch, // ✅ EXPOSED
+      }}
     >
       {children}
     </UserContext.Provider>

@@ -9,6 +9,7 @@ import { useThemeContext } from "../../context/ThemeContext";
 import black_logo from "../../assets/black_logo.png";
 import white_logo from "../../assets/white_logo.png";
 import { retryFetch } from "../../utils/retryFetch";
+import AppLoader from "../AppLoader";
 
 export default function StaffDashboardView() {
   const { token } = useUserContext();
@@ -16,7 +17,8 @@ export default function StaffDashboardView() {
 
   const [quote, setQuote] = useState("");
   const [books, setBooks] = useState([]);
-  const [borrowed, setBorrowed] = useState([0, 0]); // [borrowedCount, returnedCount]
+  const [borrowed, setBorrowed] = useState([0, 0]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const phraseIndex = parseInt(
@@ -31,6 +33,7 @@ export default function StaffDashboardView() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [booksRes, allBorrowRes] = await Promise.all([
           retryFetch(
             "https://libarybackend.vercel.app/books/?skip=0&limit=100",
@@ -56,11 +59,17 @@ export default function StaffDashboardView() {
       } catch (err) {
         toast.error("Failed to load staff dashboard data.");
         console.error("Staff dashboard error:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     if (token) fetchData();
   }, [token]);
+
+  if (loading) {
+    return <AppLoader message="Loading dashboard..." />;
+  }
 
   return (
     <div className="w-full flex flex-col h-full justify-between px-4 py-6 sm:px-8 font-montserrat space-y-8">

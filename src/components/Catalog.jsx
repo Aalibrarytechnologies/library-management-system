@@ -6,15 +6,17 @@ import { retryFetch } from "../utils/retryFetch";
 import ReceiptModal from "../components/ReceiptModal";
 import ConfirmationModal from "../components/ConfirmationModal";
 import DatePicker from "react-datepicker";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import AppLoader from "../components/AppLoader"; // ✅ import
 
 export default function Catalog() {
-  const { token, user } = useUserContext();
+  const { token, user, logout } = useUserContext();
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const initialTab = queryParams.get("tab") || "borrowed";
-  const [activeTab, setActiveTab] = useState(initialTab);
 
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [borrowedBooks, setBorrowedBooks] = useState([]);
@@ -29,7 +31,8 @@ export default function Catalog() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [renewDate, setRenewDate] = useState(null);
   const [renewingBookId, setRenewingBookId] = useState(null);
-  const [renewDueLimit, setRenewDueLimit] = useState(null);
+  const [reloadFlag, setReloadFlag] = useState(false);
+  const [loading, setLoading] = useState(true); // ✅ local loading state
 
   const isStaff = user?.role === "staff";
 
@@ -38,51 +41,61 @@ export default function Catalog() {
     return () => clearTimeout(delay);
   }, [searchTerm]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const booksRes = await retryFetch(
-          `https://libarybackend.vercel.app/books/?skip=0&limit=10000`,
-          { headers: { Authorization: `Bearer ${token}` } }
+  const fetchData = async () => {
+    try {
+      setLoading(true); // ✅ start loading
+
+      const booksRes = await retryFetch(
+        `https://libarybackend.vercel.app/books/?skip=0&limit=10000`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const books = await booksRes.json();
+      const map = {};
+      books.forEach((b) => (map[b.id] = b));
+      setAllBooksMap(map);
+
+      if (isStaff) {
+        const allRes = await retryFetch(
+          `https://libarybackend.vercel.app/borrowed_books/all/`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
-        const books = await booksRes.json();
-        const map = {};
-        books.forEach((b) => (map[b.id] = b));
-        setAllBooksMap(map);
-
-        if (isStaff) {
-          const allRes = await retryFetch(
-            `https://libarybackend.vercel.app/borrowed_books/all/`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          const all = await allRes.json();
-          setBorrowedBooks(all.filter((b) => !b.returned_date));
-          setReturnedBooks(all.filter((b) => b.returned_date));
-        } else {
-          const [borrowedRes, returnedRes] = await Promise.all([
-            retryFetch(
-              `https://libarybackend.vercel.app/users/me/borrowed_books/`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            ),
-            retryFetch(
-              `https://libarybackend.vercel.app/users/me/borrow_history/`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            ),
-          ]);
-          setBorrowedBooks(await borrowedRes.json());
-          setReturnedBooks(
-            (await returnedRes.json()).filter((b) => b.returned_date)
-          );
-        }
-      } catch {
-        toast.error("Error loading your catalog.");
+        const all = await allRes.json();
+        setBorrowedBooks(all.filter((b) => !b.returned_date));
+        setReturnedBooks(all.filter((b) => b.returned_date));
+      } else {
+        const historyRes = await retryFetch(
+          `https://libarybackend.vercel.app/users/me/borrow_history/`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const allRecords = await historyRes.json();
+        setBorrowedBooks(allRecords.filter((b) => !b.returned_date));
+        setReturnedBooks(allRecords.filter((b) => !!b.returned_date));
       }
-    };
+    } catch (err) {
+      if (err?.type === "AUTH_ERROR") {
+        toast.error("Session expired. Please log in again.");
+        logout();
+        navigate(`/${user?.role || "student"}/login`);
+      } else {
+        toast.error("Error loading your catalog.");
+        console.error(err);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (user && token) fetchData();
-  }, [user, token]);
+  }, [user, token, reloadFlag]);
+
+  if (loading) {
+    return <AppLoader message="Loading catalog..." />;
+  }
 
   const filteredBooks = (
     activeTab === "borrowed" ? borrowedBooks : returnedBooks
@@ -106,7 +119,13 @@ export default function Catalog() {
       const data = await res.json();
       setReceiptBook(data);
       setShowReceipt(true);
-    } catch {
+    } catch (err) {
+      if (err?.type === "AUTH_ERROR") {
+        toast.error("Session expired. Please log in again.");
+        logout();
+        navigate(`/${user?.role || "student"}/login`);
+        return;
+      }
       toast.error("Unable to fetch book details.");
     }
   };
@@ -122,10 +141,17 @@ export default function Catalog() {
         }
       );
       toast.success("Book returned!");
-      setBorrowedBooks((prev) => prev.filter((b) => b.id !== borrowId));
+      setReloadFlag((prev) => !prev);
       setShowConfirm(false);
-    } catch {
+    } catch (err) {
+      if (err?.type === "AUTH_ERROR") {
+        toast.error("Session expired. Please log in again.");
+        logout();
+        navigate(`/${user?.role || "student"}/login`);
+        return;
+      }
       toast.error("Failed to return book.");
+      console.error("Error returning book:", err);
     } finally {
       setConfirmLoading(false);
     }
@@ -147,9 +173,17 @@ export default function Catalog() {
         }),
       });
       toast.success("Book borrowed again!");
+      setReloadFlag((prev) => !prev);
       setShowConfirm(false);
-    } catch {
+    } catch (err) {
+      if (err?.type === "AUTH_ERROR") {
+        toast.error("Session expired. Please log in again.");
+        logout();
+        navigate(`/${user?.role || "student"}/login`);
+        return;
+      }
       toast.error("Rebook failed.");
+      console.error("Rebook error:", err);
     } finally {
       setConfirmLoading(false);
     }
@@ -158,13 +192,14 @@ export default function Catalog() {
   const handleRenew = async () => {
     setConfirmLoading(true);
 
-    if (renewDate > new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)) {
-      toast.error("Renewal exceeds 30-day limit.");
+    // Defensive check
+    if (!renewDate || isNaN(new Date(renewDate).getTime())) {
+      toast.error("Please select a new due date.");
       setConfirmLoading(false);
       return;
     }
 
-    const formattedDate = renewDate.toISOString().split("T")[0];
+    const formattedDate = new Date(renewDate).toISOString().split("T")[0];
 
     try {
       await retryFetch(
@@ -175,9 +210,19 @@ export default function Catalog() {
         }
       );
       toast.success("Book renewed successfully.");
+      setReloadFlag((prev) => !prev);
       setShowConfirm(false);
-    } catch {
-      toast.error("Failed to renew book.");
+      setRenewingBookId(null); // ✅ Reset state
+      setRenewDate(null); // ✅ Reset state
+    } catch (err) {
+      if (err?.type === "AUTH_ERROR") {
+        toast.error("Session expired. Please log in again.");
+        logout();
+        navigate(`/${user?.role || "student"}/login`);
+      } else {
+        toast.error("Failed to renew book.");
+        console.error("Renew error:", err);
+      }
     } finally {
       setConfirmLoading(false);
     }
@@ -257,7 +302,6 @@ export default function Catalog() {
                         setConfirmTitle("Renew Book");
                         setRenewDate(new Date());
                         setRenewingBookId(book.id);
-                        setRenewDueLimit(new Date(book.due_date));
                         setConfirmAction(() => handleRenew);
                         setShowConfirm(true);
                       }}
@@ -267,7 +311,6 @@ export default function Catalog() {
                   ) : (
                     <span className="text-red-500 italic">Overdue</span>
                   )}
-
                   {activeTab === "borrowed" ? (
                     <button
                       className="ml-4 text-blue-600 hover:underline"
@@ -305,7 +348,6 @@ export default function Catalog() {
                 </td>
               </tr>
             ))}
-
             {filteredBooks.length === 0 && (
               <tr>
                 <td colSpan={5} className="text-center py-6 text-gray-500">
@@ -317,13 +359,13 @@ export default function Catalog() {
         </table>
       </div>
 
+      {/* Modals */}
       {showReceipt && (
         <ReceiptModal
           book={receiptBook}
           onClose={() => setShowReceipt(false)}
         />
       )}
-
       {showConfirm && (
         <ConfirmationModal
           title={confirmTitle}
@@ -339,26 +381,13 @@ export default function Catalog() {
 
               <DatePicker
                 selected={renewDate}
-                onChange={(date) => setRenewDate(date)}
+                onChange={(date) => {
+                  console.log("Picked date:", date); // Optional: remove in production
+                  setRenewDate(date);
+                }}
                 minDate={new Date()}
                 maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
                 className="w-full mt-1 px-3 py-2 border rounded-lg dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
-                dayClassName={(date) => {
-                  const now = new Date();
-                  const max = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                  const isOutsideRange = date < now || date > max;
-                  return isOutsideRange ? "tooltip-day" : "";
-                }}
-                onCalendarOpen={() => {
-                  setTimeout(() => {
-                    document.querySelectorAll(".tooltip-day").forEach((el) => {
-                      el.setAttribute(
-                        "title",
-                        "Date must be within 30 days from today"
-                      );
-                    });
-                  }, 0);
-                }}
               />
             </div>
           )}
