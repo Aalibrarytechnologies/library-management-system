@@ -3,12 +3,14 @@ import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUserContext } from "../context/UserContext";
 import ThemeToggle from "./ThemeToggle";
+import { useNavigate } from "react-router-dom";
 
 export default function SettingsModal({ onClose }) {
-  const { user, updateUser, token } = useUserContext();
+  const { user, updateUser, token, logout } = useUserContext();
   const [name, setName] = useState(user?.full_name || "");
   const [password, setPassword] = useState("");
   const modalRef = useRef();
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -24,6 +26,13 @@ export default function SettingsModal({ onClose }) {
   const handleUpdate = async (e) => {
     e.preventDefault();
 
+    const shouldUpdate =
+      name.trim() !== user?.full_name.trim() || password.trim() !== "";
+
+    if (!shouldUpdate) {
+      return;
+    }
+
     try {
       const res = await fetch(`https://libarybackend.vercel.app/users/me/`, {
         method: "PUT",
@@ -38,14 +47,22 @@ export default function SettingsModal({ onClose }) {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Update failed");
+      if (!res.ok) {
+        if (res.status === 401) {
+          logout();
+          toast.error("Session expired. Please log in again.");
+          navigate(`/${user?.role || "student"}/login`);
+          return;
+        }
+        throw new Error(data.message || "Update failed");
+      }
 
       updateUser({ full_name: name });
       toast.success("Profile updated successfully!");
       setPassword("");
       onClose();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || "Something went wrong.");
     }
   };
 

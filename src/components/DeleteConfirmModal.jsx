@@ -1,10 +1,13 @@
-// components/books/modals/DeleteConfirmModal.jsx
 import { useState } from "react";
 import { useUserContext } from "../context/UserContext";
 import toast from "react-hot-toast";
 import { X, Trash2 } from "lucide-react";
 
-export default function DeleteConfirmModal({ bookId, onClose }) {
+export default function DeleteConfirmModal({
+  bookId,
+  onClose,
+  onDeleteSuccess,
+}) {
   const { token } = useUserContext();
   const [loading, setLoading] = useState(false);
 
@@ -26,11 +29,12 @@ export default function DeleteConfirmModal({ bookId, onClose }) {
       if (!res.ok) throw new Error("Failed to delete book");
 
       toast.success("Book deleted successfully!");
-      onClose(true); // Pass true to indicate success
+      onClose(); // Close modal
+      onDeleteSuccess(); // ✅ Trigger refresh in Books.jsx
     } catch (err) {
-      toast.error("Failed to delete book.");
+      toast.error(err.message || "Failed to delete book.");
       console.error(err);
-      onClose(false); // Or false for failure (optional)
+      onClose(false); // Just close the modal (optional: pass false if needed)
     } finally {
       setLoading(false);
     }
@@ -43,7 +47,7 @@ export default function DeleteConfirmModal({ bookId, onClose }) {
           <h2 className="text-lg font-semibold text-black dark:text-white">
             Confirm Deletion
           </h2>
-          <button className="cursor-pointer" onClick={() => onClose(false)}>
+          <button className="cursor-pointer" onClick={() => onClose()}>
             <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
@@ -55,7 +59,7 @@ export default function DeleteConfirmModal({ bookId, onClose }) {
 
         <div className="flex justify-end gap-3">
           <button
-            onClick={() => onClose(false)}
+            onClick={() => onClose()}
             className="px-4 cursor-pointer py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
           >
             Cancel

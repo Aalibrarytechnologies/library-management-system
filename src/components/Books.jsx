@@ -51,27 +51,24 @@ export default function Books() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const fetchBooks = async () => {
+  const refreshBooks = async () => {
     try {
-      setLoading(true); // ✅ start loading
+      setLoading(true);
 
-      const pageRes = await retryFetch(
-        `https://libarybackend.vercel.app/books/?skip=${skip}&limit=${limit}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const pageData = await pageRes.json();
-      setBooks(pageData);
-
-      const countRes = await retryFetch(
+      const allRes = await retryFetch(
         `https://libarybackend.vercel.app/books/?skip=0&limit=10000`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      const allBooks = await countRes.json();
-      setTotalBooks(allBooks.length);
+
+      const allBooks = await allRes.json();
+
+      const sorted = allBooks.sort((a, b) => a.id - b.id);
+      setTotalBooks(sorted.length);
+
+      const paginated = sorted.slice(skip, skip + limit);
+      setBooks(paginated);
     } catch (err) {
       if (err?.type === "AUTH_ERROR") {
         toast.error("Session expired. Please log in again.");
@@ -80,13 +77,13 @@ export default function Books() {
         toast.error("Failed to load data.");
       }
     } finally {
-      setLoading(false); // ✅ end loading
+      setLoading(false);
     }
   };
 
   // Fetch books
   useEffect(() => {
-    if (token) fetchBooks();
+    if (token) refreshBooks();
   }, [token, skip, limit]);
 
   useEffect(() => {
@@ -108,7 +105,7 @@ export default function Books() {
   );
 
   if (loading) {
-    return <AppLoader message="Loading books..." />; 
+    return <AppLoader message="Loading books..." />;
   }
 
   return (
@@ -194,7 +191,7 @@ export default function Books() {
                 }}
                 className="bg-transparent cursor-pointer text-sm outline-none dark:text-white"
               >
-                {[5, 10, 20, 50].map((opt) => (
+                {[5, 10, 20, 50, 75, 100].map((opt) => (
                   <option
                     key={opt}
                     value={opt}
@@ -268,6 +265,7 @@ export default function Books() {
                       </div>
                     ) : (
                       <input
+                        className="accent-black dark:accent-white cursor-pointer"
                         type="checkbox"
                         checked={selectedBooks.includes(book.id)}
                         onChange={() => handleSelect(book.id)}
@@ -300,6 +298,7 @@ export default function Books() {
                   <td className="px-4 py-2">{book.genre}</td>
                   <td className="px-4 py-2">
                     <input
+                      className="accent-black dark:accent-white cursor-pointer"
                       type="checkbox"
                       checked={selectedBooks.includes(book.id)}
                       onChange={() => handleSelect(book.id)}
@@ -338,20 +337,34 @@ export default function Books() {
         fallback={<div className="text-center text-sm py-4">Loading...</div>}
       >
         {showAddModal && (
-          <AddBookModal onClose={() => setShowAddModal(false)} />
+          <AddBookModal
+            onClose={() => setShowAddModal(false)}
+            onBookAdded={() => refreshBooks}
+          />
         )}
+
         {showUpdateModal && editingBook && (
           <UpdateBookModal
             book={editingBook}
             onClose={() => setShowUpdateModal(false)}
+            onUpdateSuccess={() => {
+              setShowUpdateModal(false);
+              refreshBooks();
+            }}
           />
         )}
+
         {showDeleteModal && editingBook && (
           <DeleteConfirmModal
-            book={editingBook}
+            bookId={editingBook.id}
             onClose={() => setShowDeleteModal(false)}
+            onDeleteSuccess={() => {
+              setShowDeleteModal(false);
+              refreshBooks();
+            }}
           />
         )}
+
         {showAcquireModal && (
           <AcquireModal
             selectedBookIds={selectedBooks}
@@ -359,7 +372,7 @@ export default function Books() {
             setSelectedBooks={setSelectedBooks}
             onBorrowSuccess={() => {
               setSelectedBooks([]);
-              fetchBooks();
+              refreshBooks();
             }}
           />
         )}

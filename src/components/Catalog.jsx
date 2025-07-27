@@ -32,7 +32,7 @@ export default function Catalog() {
   const [renewDate, setRenewDate] = useState(null);
   const [renewingBookId, setRenewingBookId] = useState(null);
   const [reloadFlag, setReloadFlag] = useState(false);
-  const [loading, setLoading] = useState(true); // ✅ local loading state
+  const [loading, setLoading] = useState(true);
 
   const isStaff = user?.role === "staff";
 
@@ -43,8 +43,7 @@ export default function Catalog() {
 
   const fetchData = async () => {
     try {
-      setLoading(true); // ✅ start loading
-
+      setLoading(true);
       const booksRes = await retryFetch(
         `https://libarybackend.vercel.app/books/?skip=0&limit=10000`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -57,9 +56,7 @@ export default function Catalog() {
       if (isStaff) {
         const allRes = await retryFetch(
           `https://libarybackend.vercel.app/borrowed_books/all/`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const all = await allRes.json();
         setBorrowedBooks(all.filter((b) => !b.returned_date));
@@ -67,9 +64,7 @@ export default function Catalog() {
       } else {
         const historyRes = await retryFetch(
           `https://libarybackend.vercel.app/users/me/borrow_history/`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const allRecords = await historyRes.json();
         setBorrowedBooks(allRecords.filter((b) => !b.returned_date));
@@ -93,9 +88,7 @@ export default function Catalog() {
     if (user && token) fetchData();
   }, [user, token, reloadFlag]);
 
-  if (loading) {
-    return <AppLoader message="Loading catalog..." />;
-  }
+  if (loading) return <AppLoader message="Loading catalog..." />;
 
   const filteredBooks = (
     activeTab === "borrowed" ? borrowedBooks : returnedBooks
@@ -191,16 +184,12 @@ export default function Catalog() {
 
   const handleRenew = async () => {
     setConfirmLoading(true);
-
-    // Defensive check
     if (!renewDate || isNaN(new Date(renewDate).getTime())) {
       toast.error("Please select a new due date.");
       setConfirmLoading(false);
       return;
     }
-
     const formattedDate = new Date(renewDate).toISOString().split("T")[0];
-
     try {
       await retryFetch(
         `https://libarybackend.vercel.app/borrow/${renewingBookId}/renew?new_due_date=${formattedDate}`,
@@ -240,7 +229,7 @@ export default function Catalog() {
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("borrowed")}
-            className={`px-4 py-2 cursor-pointer rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg cursor-pointer text-sm font-medium transition-colors ${
               activeTab === "borrowed"
                 ? "bg-black text-white dark:bg-white dark:text-black"
                 : "bg-gray-200 dark:bg-zinc-700 text-black dark:text-white"
@@ -294,8 +283,8 @@ export default function Catalog() {
                 <td className="px-4 py-3">{book.user_id}</td>
                 <td className="px-4 py-3">{book.due_date}</td>
                 <td className="px-4 py-3">{book.returned_date || "--"}</td>
-                <td className="px-4 py-3">
-                  {!isOverdue(book.due_date) ? (
+                <td className="px-4 py-3 flex justify-between w-50 items-center">
+                  {activeTab === "borrowed" && !isOverdue(book.due_date) && (
                     <button
                       className="text-purple-600 cursor-pointer hover:underline"
                       onClick={() => {
@@ -308,12 +297,13 @@ export default function Catalog() {
                     >
                       Renew
                     </button>
-                  ) : (
+                  )}
+                  {activeTab === "borrowed" && isOverdue(book.due_date) && (
                     <span className="text-red-500 italic">Overdue</span>
                   )}
-                  {activeTab === "borrowed" ? (
+                  {activeTab === "borrowed" && isStaff && (
                     <button
-                      className="ml-4 cursor-pointer text-blue-600 hover:underline"
+                      className="cursor-pointer text-blue-600 hover:underline"
                       onClick={() => {
                         setConfirmTitle("Return Book");
                         setConfirmMessage(
@@ -325,7 +315,8 @@ export default function Catalog() {
                     >
                       Return
                     </button>
-                  ) : (
+                  )}
+                  {activeTab !== "borrowed" && (
                     <div className="flex gap-2 items-center">
                       <button
                         className="text-green-600 cursor-pointer hover:underline"
@@ -340,14 +331,11 @@ export default function Catalog() {
                       >
                         Rebook
                       </button>
-                      <button
-                        className="cursor-pointer"
-                        onClick={() => handleShowReceipt(book.book_id)}
-                      >
-                        <ReceiptIcon className="w-5 h-5 text-blue-500 hover:text-blue-700" />
-                      </button>
                     </div>
                   )}
+                  <button onClick={() => handleShowReceipt(book.book_id)}>
+                    <ReceiptIcon className="w-5 h-5 cursor-pointer text-blue-500 hover:text-blue-700" />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -381,13 +369,9 @@ export default function Catalog() {
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 Select a new due date (within 30 days)
               </p>
-
               <DatePicker
                 selected={renewDate}
-                onChange={(date) => {
-                  console.log("Picked date:", date); // Optional: remove in production
-                  setRenewDate(date);
-                }}
+                onChange={(date) => setRenewDate(date)}
                 minDate={new Date()}
                 maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
                 className="w-full mt-1 px-3 py-2 border rounded-lg dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"

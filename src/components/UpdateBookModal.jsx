@@ -1,11 +1,12 @@
-// components/books/modals/UpdateBookModal.jsx
 import { useState } from "react";
 import { useUserContext } from "../context/UserContext";
 import toast from "react-hot-toast";
 import { X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export default function UpdateBookModal({ book, onClose }) {
-  const { token } = useUserContext();
+export default function UpdateBookModal({ book, onClose, onUpdateSuccess }) {
+  const { token, logout, user } = useUserContext();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     title: book.title || "",
@@ -38,13 +39,26 @@ export default function UpdateBookModal({ book, onClose }) {
         }
       );
 
-      if (!res.ok) throw new Error("Failed to update book");
+      const data = await res.json();
+
+      if (res.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        logout();
+        navigate(`/${user?.role || "student"}/login`);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update book");
+      }
 
       toast.success("Book updated successfully!");
-      onClose();
+      onUpdateSuccess?.(); 
+      onClose(); 
     } catch (err) {
-      toast.error("Failed to update book");
-      console.error(err);
+      toast.error(err.message || "Failed to update book");
+      console.error("Update error:", err);
+      onClose(false);
     } finally {
       setLoading(false);
     }
@@ -87,14 +101,16 @@ export default function UpdateBookModal({ book, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 cursor-pointer py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+              className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`px-4 py-2 ${loading ? "cursor-not-allowed" : "cursor-pointer"} text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90`}
+              className={`px-4 py-2 ${
+                loading ? "cursor-not-allowed" : "cursor-pointer"
+              } text-sm rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90`}
             >
               {loading ? "Updating..." : "Update Book"}
             </button>
