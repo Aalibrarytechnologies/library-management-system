@@ -39,3 +39,6 @@ git clone https://github.com/your-username/aa-library-system.git
 cd aa-library-system
 npm install
 npm run dev
+
+![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Vercel Deploy](https://img.shields.io/badge/deploy-vercel-brightgreen)
