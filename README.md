@@ -1,12 +1,41 @@
-# React + Vite
+# 📚 A&A Library Technologies – LibraCheck
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**LibraCheck** is a modern web-based check-in/out system for public libraries, developed by A&A Library Technologies — a company founded to honor two daughters, Alice and Anastasia, and to support community growth through innovation, not automation.
 
-Currently, two official plugins are available:
+This system is designed to streamline item circulation without eliminating valuable library staff. It runs beautifully on tablets and desktop PCs, making it easy for patrons and staff to use in real-time.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🚀 Project Goals
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Modernize outdated library circulation systems
+- Simplify check-in and check-out workflows
+- Ensure compatibility with tablets and PCs
+- Keep staff in the loop — not out of a job
+- Scale the solution through a subscription model
+
+---
+
+## 🧠 Built With
+
+- [React](https://reactjs.org/) – frontend framework
+- [Vite](https://vitejs.dev/) – fast build tooling
+- [Tailwind CSS](https://tailwindcss.com/) – responsive UI
+- [Node.js + Express (planned)] – backend API
+- [Firebase or Supabase (planned)] – data storage
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+- Node.js installed
+- Git installed
+
+### Local Setup
+
+```bash
+git clone https://github.com/your-username/aa-library-system.git
+cd aa-library-system
+npm install
+npm run dev
