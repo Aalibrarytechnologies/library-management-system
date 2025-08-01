@@ -1,4 +1,4 @@
-![Logo](https://raw.githubusercontent.com/Aalibrarytechnologies/library-management-systems/main/A&Aupdateddesign.png)
+![Logo](https://raw.githubusercontent.com/AALibraryTechnologies/library-management-system/main/Blue%20and%20Purple%20Modern%20Neon%20AI%20Art%20Instagram%20Post%20.png)
 # 📚 A&A Library Technologies – LibraCheck
 
 **LibraCheck** is a modern web-based check-in/out system for public libraries, developed by A&A Library Technologies — a company founded to honor two daughters, Alice and Anastasia, and to support community growth through innovation, not automation.
